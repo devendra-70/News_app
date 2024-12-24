@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>News Homepage</title>
+</head>
+<body>
+    <h1>Latest News</h1>
+    <ul>
+        {% for article in news_articles %}
+            <li>
+                <a href="{{ article.url }}" target="_blank">{{ article.title }}</a><br>
+                <small>Source: {{ article.source }} | Published At: {{ article.published_at }}</small>
+                <p>{{ article.summary }}</p>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
