@@ -2,9 +2,40 @@
 <html>
 <head>
     <title>News Homepage</title>
+    <script type="text/javascript">
+        // Function to handle the date selection and send the form data
+        function handleSearch() {
+            let searchQuery = document.getElementById("search-input").value;
+            let fromDate = document.getElementById("from-date").value;
+            let toDate = document.getElementById("to-date").value;
+
+            // Redirect to the search results page with query and date filters
+            let queryString = `?q=${encodeURIComponent(searchQuery)}`;
+            if (fromDate) {
+                queryString += `&from=${encodeURIComponent(fromDate)}`;
+            }
+            if (toDate) {
+                queryString += `&to=${encodeURIComponent(toDate)}`;
+            }
+
+            window.location.href = `/search/${queryString}`;
+        }
+    </script>
 </head>
 <body>
     <h1>Latest News</h1>
+
+    <!-- Search Bar with Calendar Input -->
+    <div>
+        <input type="text" id="search-input" placeholder="Search news..." />
+        <button onclick="handleSearch()">Search</button>
+        
+        <input type="date" id="from-date" placeholder="Start Date" />
+        <input type="date" id="to-date" placeholder="End Date" />
+    </div>
+
+    <!-- Display search results -->
+    <h2>News Articles</h2>
     <ul>
         {% for article in news_articles %}
             <li>
@@ -14,5 +45,6 @@
             </li>
         {% endfor %}
     </ul>
+
 </body>
 </html>
