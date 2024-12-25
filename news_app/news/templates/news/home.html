@@ -18,7 +18,20 @@
                 queryString += `&to=${encodeURIComponent(toDate)}`;
             }
 
+            // Show the "Clear Filters" button after filter is applied
+            document.getElementById("clear-button").style.display = 'inline-block';
+            
             window.location.href = `/search/${queryString}`;
+        }
+
+        // Function to reset the filters and reload the page without any date filters
+        function clearFilters() {
+            // Reset the date inputs to empty
+            document.getElementById("from-date").value = '';
+            document.getElementById("to-date").value = '';
+            
+            // Reload the page without date filters
+            window.location.href = '/';
         }
     </script>
 </head>
@@ -27,11 +40,16 @@
 
     <!-- Search Bar with Calendar Input -->
     <div>
-        <input type="text" id="search-input" placeholder="Search news..." />
+        <input type="text" id="search-input" placeholder="Search news..." value="{{ query }}" />
         <button onclick="handleSearch()">Search</button>
         
-        <input type="date" id="from-date" placeholder="Start Date" />
-        <input type="date" id="to-date" placeholder="End Date" />
+        <!-- Date Range Filter -->
+        <input type="date" id="from-date" name="from" value="{{ from_date }}" />
+        <input type="date" id="to-date" name="to" value="{{ to_date }}" />
+        <button onclick="handleSearch()">Filter</button>
+
+        <!-- Clear Button (hidden by default) -->
+        <button id="clear-button" style="display: none;" onclick="clearFilters()">Clear Filters</button>
     </div>
 
     <!-- Display search results -->
