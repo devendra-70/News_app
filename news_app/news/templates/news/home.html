@@ -2,9 +2,58 @@
 <html>
 <head>
     <title>News Homepage</title>
+    <script type="text/javascript">
+        // Function to handle the date selection and send the form data
+        function handleSearch() {
+            let searchQuery = document.getElementById("search-input").value;
+            let fromDate = document.getElementById("from-date").value;
+            let toDate = document.getElementById("to-date").value;
+
+            // Redirect to the search results page with query and date filters
+            let queryString = `?q=${encodeURIComponent(searchQuery)}`;
+            if (fromDate) {
+                queryString += `&from=${encodeURIComponent(fromDate)}`;
+            }
+            if (toDate) {
+                queryString += `&to=${encodeURIComponent(toDate)}`;
+            }
+
+            // Show the "Clear Filters" button after filter is applied
+            document.getElementById("clear-button").style.display = 'inline-block';
+            
+            window.location.href = `/search/${queryString}`;
+        }
+
+        // Function to reset the filters and reload the page without any date filters
+        function clearFilters() {
+            // Reset the date inputs to empty
+            document.getElementById("from-date").value = '';
+            document.getElementById("to-date").value = '';
+            
+            // Reload the page without date filters
+            window.location.href = '/';
+        }
+    </script>
 </head>
 <body>
     <h1>Latest News</h1>
+
+    <!-- Search Bar with Calendar Input -->
+    <div>
+        <input type="text" id="search-input" placeholder="Search news..." value="{{ query }}" />
+        <button onclick="handleSearch()">Search</button>
+        
+        <!-- Date Range Filter -->
+        <input type="date" id="from-date" name="from" value="{{ from_date }}" />
+        <input type="date" id="to-date" name="to" value="{{ to_date }}" />
+        <button onclick="handleSearch()">Filter</button>
+
+        <!-- Clear Button (hidden by default) -->
+        <button id="clear-button" style="display: none;" onclick="clearFilters()">Clear Filters</button>
+    </div>
+
+    <!-- Display search results -->
+    <h2>News Articles</h2>
     <ul>
         {% for article in news_articles %}
             <li>
@@ -14,5 +63,6 @@
             </li>
         {% endfor %}
     </ul>
+
 </body>
 </html>
