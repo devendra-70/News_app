@@ -1,68 +1,89 @@
+<!-- templates/news/home.html -->
 <!DOCTYPE html>
 <html>
 <head>
     <title>News Homepage</title>
-    <script type="text/javascript">
-        // Function to handle the date selection and send the form data
-        function handleSearch() {
-            let searchQuery = document.getElementById("search-input").value;
-            let fromDate = document.getElementById("from-date").value;
-            let toDate = document.getElementById("to-date").value;
-
-            // Redirect to the search results page with query and date filters
-            let queryString = `?q=${encodeURIComponent(searchQuery)}`;
-            if (fromDate) {
-                queryString += `&from=${encodeURIComponent(fromDate)}`;
-            }
-            if (toDate) {
-                queryString += `&to=${encodeURIComponent(toDate)}`;
-            }
-
-            // Show the "Clear Filters" button after filter is applied
-            document.getElementById("clear-button").style.display = 'inline-block';
-            
-            window.location.href = `/search/${queryString}`;
+    <style>
+        .filters {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
         }
-
-        // Function to reset the filters and reload the page without any date filters
-        function clearFilters() {
-            // Reset the date inputs to empty
-            document.getElementById("from-date").value = '';
-            document.getElementById("to-date").value = '';
-            
-            // Reload the page without date filters
-            window.location.href = '/';
+        .article {
+            margin: 20px 0;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
         }
-    </script>
+        .article-meta {
+            color: #666;
+            font-size: 0.9em;
+            margin: 5px 0;
+        }
+        .filter-group {
+            margin: 10px 0;
+        }
+    </style>
 </head>
 <body>
     <h1>Latest News</h1>
 
-    <!-- Search Bar with Calendar Input -->
-    <div>
-        <input type="text" id="search-input" placeholder="Search news..." value="{{ query }}" />
-        <button onclick="handleSearch()">Search</button>
-        
-        <!-- Date Range Filter -->
-        <input type="date" id="from-date" name="from" value="{{ from_date }}" />
-        <input type="date" id="to-date" name="to" value="{{ to_date }}" />
-        <button onclick="handleSearch()">Filter</button>
+    <!-- Filters -->
+    <div class="filters">
+        <form method="GET" action="">
+            <div class="filter-group">
+                <label>Date Range:</label>
+                <input type="date" name="from" value="{{ from_date }}">
+                <span>to</span>
+                <input type="date" name="to" value="{{ to_date }}">
+            </div>
 
-        <!-- Clear Button (hidden by default) -->
-        <button id="clear-button" style="display: none;" onclick="clearFilters()">Clear Filters</button>
+            <div class="filter-group">
+                <label>Source:</label>
+                <select name="source">
+                    <option value="">All Sources</option>
+                    {% for source in sources %}
+                        <option value="{{ source }}" {% if source == selected_source %}selected{% endif %}>
+                            {{ source }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label>Category:</label>
+                <select name="category">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category }}" {% if category == selected_category %}selected{% endif %}>
+                            {{ category }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <button type="submit">Apply Filters</button>
+            {% if filter_applied %}
+                <a href="{% url 'home' %}">Clear Filters</a>
+            {% endif %}
+        </form>
     </div>
 
-    <!-- Display search results -->
-    <h2>News Articles</h2>
-    <ul>
+    <!-- News Articles -->
+    <div class="articles">
         {% for article in news_articles %}
-            <li>
-                <a href="{{ article.url }}" target="_blank">{{ article.title }}</a><br>
-                <small>Source: {{ article.source }} | Published At: {{ article.published_at }}</small>
+            <div class="article">
+                <h3><a href="{{ article.url }}" target="_blank">{{ article.title }}</a></h3>
+                <div class="article-meta">
+                    <span>Source: {{ article.source }}</span> |
+                    <span>Category: {{ article.category }}</span> |
+                    <span>Published: {{ article.published_at|date:"F j, Y, g:i a" }}</span>
+                </div>
                 <p>{{ article.summary }}</p>
-            </li>
+            </div>
+        {% empty %}
+            <p>No articles found matching your criteria.</p>
         {% endfor %}
-    </ul>
-
+    </div>
 </body>
 </html>
