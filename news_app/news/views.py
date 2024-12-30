@@ -1,10 +1,11 @@
-# views.py
 from datetime import datetime
 from django.shortcuts import render
 from django.utils.dateparse import parse_date
 from .models import NewsArticle
 from .utils.feed_parser import FeedParser  # Fixed import statement
+from .utils.article_fetcher import fetch_article_content  # New import
 import logging
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +44,31 @@ def home(request):
         news_articles = news_articles.filter(category=category_filter)
 
     # Get unique sources and categories for filters
+    def extract_publisher(url):
+        """Extract publisher name from RSS feed URL"""
+        domain = urlparse(url).netloc
+        # Remove common prefixes and suffixes
+        domain = domain.replace('www.', '').replace('feeds.', '')
+        # Get the main domain part
+        parts = domain.split('.')
+        return parts[0].title() if parts else ''
     sources = NewsArticle.objects.values_list('source', flat=True).distinct()
+    sources = sorted(set(extract_publisher(source) for source in sources))
     categories = NewsArticle.objects.values_list('category', flat=True).distinct()
 
     # Get the 200 most recent articles, sorted by publication date
     news_articles = news_articles.order_by('-published_at')[:200]
+
+    # Handle the article view when a link is clicked
+    article_url = request.GET.get('article_url', None)
+    if article_url:
+        article_content = fetch_article_content(article_url)
+        if article_content:
+            # Add extra context for template
+            article_content['word_count_display'] = f"{article_content.get('word_count', 0)} words"
+            if article_content.get('author'):
+                article_content['byline'] = f"By {article_content['author']}"
+        return render(request, 'news/article_detail.html', {'article_content': article_content})
 
     return render(request, 'news/home.html', {
         'news_articles': news_articles,

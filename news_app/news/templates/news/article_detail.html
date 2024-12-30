@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Article Detail</title>
+    <style>
+        .article-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .article-meta {
+            color: #666;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        .article-content {
+            line-height: 1.6;
+            margin-top: 20px;
+        }
+        .article-excerpt {
+            font-style: italic;
+            color: #444;
+            margin: 20px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-left: 3px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="article-container">
+        {% if article_content %}
+            <h1>{{ article_content.title }}</h1>
+            
+            <div class="article-meta">
+                {% if article_content.byline %}
+                    <p>{{ article_content.byline }}</p>
+                {% endif %}
+                <p><strong>Published:</strong> {{ article_content.published_at|date:"F j, Y, g:i a" }}</p>
+                <p><strong>Source:</strong> {{ article_content.source }}</p>
+                <p><strong>Length:</strong> {{ article_content.word_count_display }}</p>
+            </div>
+
+            {% if article_content.excerpt %}
+                <div class="article-excerpt">
+                    {{ article_content.excerpt }}
+                </div>
+            {% endif %}
+
+            <div class="article-content">
+                {{ article_content.content|safe }}
+            </div>
+        {% else %}
+            <p>Sorry, we couldn't retrieve the article content.</p>
+        {% endif %}
+        
+        <p style="margin-top: 20px;">
+            <a href="{% url 'home' %}">Back to News</a>
+        </p>
+    </div>
+</body>
+</html>

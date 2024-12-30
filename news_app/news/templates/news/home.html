@@ -4,6 +4,14 @@
 <head>
     <title>News Homepage</title>
     <style>
+        .page-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
         .filters {
             margin: 20px 0;
             padding: 15px;
@@ -26,64 +34,68 @@
     </style>
 </head>
 <body>
-    <h1>Latest News</h1>
+    <div class="page-container">
+        <h1>Latest News</h1>
 
-    <!-- Filters -->
-    <div class="filters">
-        <form method="GET" action="">
-            <div class="filter-group">
-                <label>Date Range:</label>
-                <input type="date" name="from" value="{{ from_date }}">
-                <span>to</span>
-                <input type="date" name="to" value="{{ to_date }}">
-            </div>
-
-            <div class="filter-group">
-                <label>Source:</label>
-                <select name="source">
-                    <option value="">All Sources</option>
-                    {% for source in sources %}
-                        <option value="{{ source }}" {% if source == selected_source %}selected{% endif %}>
-                            {{ source }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="filter-group">
-                <label>Category:</label>
-                <select name="category">
-                    <option value="">All Categories</option>
-                    {% for category in categories %}
-                        <option value="{{ category }}" {% if category == selected_category %}selected{% endif %}>
-                            {{ category }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <button type="submit">Apply Filters</button>
-            {% if filter_applied %}
-                <a href="{% url 'home' %}">Clear Filters</a>
-            {% endif %}
-        </form>
-    </div>
-
-    <!-- News Articles -->
-    <div class="articles">
-        {% for article in news_articles %}
-            <div class="article">
-                <h3><a href="{{ article.url }}" target="_blank">{{ article.title }}</a></h3>
-                <div class="article-meta">
-                    <span>Source: {{ article.source }}</span> |
-                    <span>Category: {{ article.category }}</span> |
-                    <span>Published: {{ article.published_at|date:"F j, Y, g:i a" }}</span>
+        <!-- Filters -->
+        <div class="filters">
+            <form method="GET" action="">
+                <div class="filter-group">
+                    <label>Date Range:</label>
+                    <input type="date" name="from" value="{{ from_date }}">
+                    <span>to</span>
+                    <input type="date" name="to" value="{{ to_date }}">
                 </div>
-                <p>{{ article.summary }}</p>
-            </div>
-        {% empty %}
-            <p>No articles found matching your criteria.</p>
-        {% endfor %}
+
+                <div class="filter-group">
+                    <label>Source:</label>
+                    <select name="source">
+                        <option value="">All Sources</option>
+                        {% for source in sources %}
+                            <option value="{{ source }}" {% if source == selected_source %}selected{% endif %}>
+                                {{ source }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Category:</label>
+                    <select name="category">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                            <option value="{{ category }}" {% if category == selected_category %}selected{% endif %}>
+                                {{ category }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit">Apply Filters</button>
+                {% if filter_applied %}
+                    <a href="{% url 'home' %}">Clear Filters</a>
+                {% endif %}
+            </form>
+        </div>
+
+        <!-- News Articles -->
+        <div class="articles">
+            {% for article in news_articles %}
+                <div class="article">
+                    <h3>
+                        <a href="?article_url={{ article.url }}">{{ article.title }}</a> <!-- New: Link to fetch article -->
+                    </h3>
+                    <div class="article-meta">
+                        <span>Source: {{ article.source }}</span> |
+                        <span>Category: {{ article.category }}</span> |
+                        <span>Published: {{ article.published_at|date:"F j, Y, g:i a" }}</span>
+                    </div>
+                    <p>{{ article.summary }}</p>
+                </div>
+            {% empty %}
+                <p>No articles found matching your criteria.</p>
+            {% endfor %}
+        </div>
     </div>
 </body>
 </html>
