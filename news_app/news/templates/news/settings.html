@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>News Settings</title>
+    <style>
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; margin: 15% auto; padding: 20px; width: 70%; max-width: 600px; border-radius: 5px; }
+        .links-container { margin: 10px 0; }
+        .link-input { display: flex; margin: 5px 0; }
+        .error { color: red; margin: 5px 0; }
+        .source-list { margin: 20px 0; }
+        .source-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; align-items: center; }
+        .source-item .buttons { display: flex; gap: 10px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <h1>News Settings</h1>
+        <a href="{% url 'home' %}">Back to Home</a>
+        
+        <div class="actions">
+            <button onclick="showAddSourceModal()">Add Source</button>
+            <button id="toggleSourceBtn" onclick="toggleSourceList()">Show Existing Sources</button>
+        </div>
+
+        <div id="sourceList" class="source-list hidden"></div>
+
+        <div id="sourceModal" class="modal">
+            <div class="modal-content">
+                <h2>Add/Edit Source</h2>
+                <div id="errorMessage" class="error"></div>
+                <form id="sourceForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="sourceId">
+                    <div>
+                        <label>Source Name:</label>
+                        <input type="text" id="sourceName" name="name" required>
+                    </div>
+                    <div class="links-container" id="linksContainer">
+                        <label>RSS Links:</label>
+                        <div class="link-input">
+                            <input type="url" name="links[]" required>
+                            <button type="button" onclick="removeLink(this)">Remove</button>
+                        </div>
+                    </div>
+                    <button type="button" onclick="addLinkInput()">Add Another Link</button>
+                    <button type="submit">Save</button>
+                    <button type="button" onclick="closeModal()">Cancel</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showAddSourceModal() {
+            document.getElementById('sourceModal').style.display = 'block';
+            document.getElementById('sourceForm').reset();
+            document.getElementById('sourceId').value = '';
+        }
+
+        function closeModal() {
+            document.getElementById('sourceModal').style.display = 'none';
+            document.getElementById('errorMessage').textContent = '';
+        }
+
+        function addLinkInput() {
+            const container = document.getElementById('linksContainer');
+            const linkInput = document.createElement('div');
+            linkInput.className = 'link-input';
+            linkInput.innerHTML = `
+                <input type="url" name="links[]" required>
+                <button type="button" onclick="removeLink(this)">Remove</button>
+            `;
+            container.appendChild(linkInput);
+        }
+
+        function removeLink(button) {
+            button.parentElement.remove();
+        }
+
+        function toggleSourceList() {
+            const sourceList = document.getElementById('sourceList');
+            const toggleBtn = document.getElementById('toggleSourceBtn');
+
+            if (sourceList.classList.contains('hidden')) {
+                fetchSources();
+                sourceList.classList.remove('hidden');
+                toggleBtn.textContent = 'Hide Sources';
+            } else {
+                sourceList.classList.add('hidden');
+                toggleBtn.textContent = 'Show Existing Sources';
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function fetchSources() {
+            const csrftoken = getCookie('csrftoken');
+            fetch('/news/sources/', {
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(data => {
+                const sourceList = document.getElementById('sourceList');
+                if (data.sources && data.sources.length > 0) {
+                    sourceList.innerHTML = data.sources.map(source => `
+                        <div class="source-item" id="source-item-${source.id}">
+                            <span>${source.name}</span>
+                            <div class="buttons">
+                                <button onclick='editSource(${JSON.stringify(source)})'>Edit</button>
+                                <button onclick='removeSource(${source.id})'>Remove</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    sourceList.innerHTML = '<p>No sources found</p>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('sourceList').innerHTML = '<p>Error loading sources</p>';
+            });
+        }
+
+        function editSource(source) {
+            document.getElementById('sourceModal').style.display = 'block';
+            document.getElementById('sourceId').value = source.id;
+            document.getElementById('sourceName').value = source.name;
+            
+            const container = document.getElementById('linksContainer');
+            container.innerHTML = '';
+            source.links.forEach(link => {
+                const linkInput = document.createElement('div');
+                linkInput.className = 'link-input';
+                linkInput.innerHTML = `
+                    <input type="url" name="links[]" value="${link}" required>
+                    <button type="button" onclick="removeLink(this)">Remove</button>
+                `;
+                container.appendChild(linkInput);
+            });
+        }
+
+        function removeSource(sourceId) {
+            const csrftoken = getCookie('csrftoken');
+            fetch(`/news/sources/${sourceId}/delete/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to remove source');
+                }
+                fetchSources();  // Refresh source list after removal
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        document.getElementById('sourceForm').onsubmit = function(e) {
+            e.preventDefault();
+            const sourceId = document.getElementById('sourceId').value;
+            const formData = new FormData(this);
+            const csrftoken = getCookie('csrftoken');
+
+            const url = sourceId ? `/news/sources/${sourceId}/update/` : '/news/sources/add/';
+
+            fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': csrftoken
+                },
+                credentials: 'include'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('errorMessage').textContent = data.error;
+                } else {
+                    closeModal();
+                    fetchSources();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('errorMessage').textContent = 'An error occurred. Please try again.';
+            });
+        };
+    </script>
+</body>
+</html>

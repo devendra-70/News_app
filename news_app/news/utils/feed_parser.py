@@ -1,13 +1,13 @@
-# news/utils/feed_parser.py
+# utils
 import feedparser
 import xml.etree.ElementTree as ET
 import requests
 from datetime import datetime
 from bs4 import BeautifulSoup
 from dateutil import parser as date_parser
-from ..models import NewsArticle
+from ..models import NewsArticle, RSSLink
 import logging
-from ..rss_links import RSS_LINKS
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +29,14 @@ class FeedParser:
 
     def fetch_all_feeds(self):
         """Fetch all feeds from RSS_LINKS"""
-        for rss_url in RSS_LINKS:
+        for rss_url in self.get_feed_urls():
             try:
                 self.fetch_feed(rss_url)
             except Exception as e:
                 logger.error(f"Error fetching feed {rss_url}: {str(e)}")
+
+    def get_feed_urls(self):
+        return [link.url for link in RSSLink.objects.all()]
 
     def fetch_feed(self, feed_url):
         """Fetch and parse a single feed"""
