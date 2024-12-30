@@ -1,4 +1,3 @@
-<!-- templates/news/home.html -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -11,6 +10,17 @@
         }
         h1 {
             text-align: center;
+        }
+        .settings-link {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 1.2em;
+            color: #007bff;
+            text-decoration: none;
+        }
+        .settings-link:hover {
+            text-decoration: underline;
         }
         .filters {
             margin: 20px 0;
@@ -31,13 +41,49 @@
         .filter-group {
             margin: 10px 0;
         }
+        .load-more-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .load-more-btn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .load-more-btn:hover {
+            background-color: #0056b3;
+        }
     </style>
+    <script>
+        let offset = 20;
+        function loadMore() {
+            fetch(`?offset=${offset}${window.location.search ? '&' + window.location.search.substring(1) : ''}`, {
+                headers: {
+                    'HX-Request': 'true'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.querySelector('.articles').insertAdjacentHTML('beforeend', data.html);
+                offset += 20;
+                if (!data.has_more) {
+                    document.getElementById('load-more').style.display = 'none';
+                    document.getElementById('no-more').style.display = 'block';
+                }
+            });
+        }
+    </script>
 </head>
 <body>
     <div class="page-container">
+        <!-- Settings Link -->
+        <a href="{% url 'settings' %}" class="settings-link">Settings</a>
+        
         <h1>Latest News</h1>
 
-        <!-- Filters -->
         <div class="filters">
             <form method="GET" action="">
                 <div class="filter-group">
@@ -78,12 +124,11 @@
             </form>
         </div>
 
-        <!-- News Articles -->
         <div class="articles">
             {% for article in news_articles %}
                 <div class="article">
                     <h3>
-                        <a href="?article_url={{ article.url }}">{{ article.title }}</a> <!-- New: Link to fetch article -->
+                        <a href="?article_url={{ article.url }}">{{ article.title }}</a>
                     </h3>
                     <div class="article-meta">
                         <span>Source: {{ article.source }}</span> |
@@ -95,6 +140,11 @@
             {% empty %}
                 <p>No articles found matching your criteria.</p>
             {% endfor %}
+        </div>
+
+        <div class="load-more-container">
+            <button onclick="loadMore()" id="load-more" class="load-more-btn">Load More</button>
+            <p id="no-more" style="display: none;">No more articles to load.</p>
         </div>
     </div>
 </body>

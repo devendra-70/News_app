@@ -1,6 +1,21 @@
 # models.py
 from django.db import models
 
+class NewsSource(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    def __str__(self):
+        return self.name 
+
+class RSSLink(models.Model):
+    source = models.ForeignKey(NewsSource, on_delete=models.CASCADE, related_name='links')
+    url = models.URLField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.url 
+
 class FeedSource(models.Model):
     name = models.CharField(max_length=200)
     url = models.URLField(unique=True)
@@ -22,7 +37,7 @@ class NewsArticle(models.Model):
     summary = models.TextField()
     published_at = models.DateTimeField()
     source = models.CharField(max_length=200)
-    category = models.CharField(max_length=100, default='General')  # Add this line
+    category = models.CharField(max_length=100, default='General')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
