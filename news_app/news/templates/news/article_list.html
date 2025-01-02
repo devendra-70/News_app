@@ -1,0 +1,14 @@
+<!-- news/article_list.html -->
+{% for article in news_articles %}
+    <div class="article">
+        <h3>
+            <a href="?article_url={{ article.url }}">{{ article.title }}</a>
+        </h3>
+        <div class="article-meta">
+            <span>Source: {{ article.source }}</span> |
+            <span>Category: {{ article.category }}</span> |
+            <span>Published: {{ article.published_at|date:"F j, Y, g:i a" }}</span>
+        </div>
+        <p>{{ article.summary }}</p>
+    </div>
+{% endfor %}

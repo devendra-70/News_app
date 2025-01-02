@@ -3,14 +3,27 @@
 <head>
     <title>News Homepage</title>
     <style>
+        /* Base styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+        }
+        
         .page-container {
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
         }
+
         h1 {
             text-align: center;
+            color: #333;
+            margin-bottom: 30px;
         }
+
+        /* Settings link */
         .settings-link {
             position: absolute;
             top: 20px;
@@ -19,62 +32,288 @@
             color: #007bff;
             text-decoration: none;
         }
+
         .settings-link:hover {
             text-decoration: underline;
         }
+
+        /* Filters section */
         .filters {
             margin: 20px 0;
-            padding: 15px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        .article {
-            margin: 20px 0;
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-        }
-        .article-meta {
-            color: #666;
-            font-size: 0.9em;
-            margin: 5px 0;
-        }
+
         .filter-group {
-            margin: 10px 0;
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
-        .load-more-container {
-            text-align: center;
-            margin: 20px 0;
+
+        .filter-group label {
+            min-width: 80px;
+            color: #555;
         }
-        .load-more-btn {
-            padding: 10px 20px;
+
+        .filter-group input[type="date"],
+        .filter-group select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .filter-group select {
+            min-width: 150px;
+        }
+
+        /* Filter buttons */
+        .filter-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button[type="submit"] {
+            padding: 8px 16px;
             background-color: #007bff;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 4px;
             cursor: pointer;
+            transition: background-color 0.3s;
         }
-        .load-more-btn:hover {
+
+        button[type="submit"]:hover {
             background-color: #0056b3;
         }
+
+        .clear-filters {
+            padding: 8px 16px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+
+        .clear-filters:hover {
+            background-color: #5a6268;
+            text-decoration: none;
+            color: white;
+        }
+
+        /* Articles section */
+        .articles {
+            margin-top: 30px;
+        }
+
+        .article {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            transition: box-shadow 0.3s;
+        }
+
+        .article:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .article h3 {
+            margin: 0 0 10px 0;
+        }
+
+        .article h3 a {
+            color: #333;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .article h3 a:hover {
+            color: #007bff;
+        }
+
+        .article-meta {
+            color: #666;
+            font-size: 0.9em;
+            margin: 10px 0;
+        }
+
+        .article p {
+            color: #555;
+            margin: 10px 0 0 0;
+        }
+
+        /* Load more section */
+        .load-more-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .load-more-btn {
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+
+        .load-more-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-1px);
+        }
+
+        .load-more-btn:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 30px;
+            height: 30px;
+            margin: 15px auto;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .end-message {
+            display: none;
+            text-align: center;
+            color: #666;
+            margin: 20px 0;
+            font-style: italic;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .page-container {
+                padding: 15px;
+            }
+
+            .filter-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-group label {
+                margin-bottom: 5px;
+            }
+
+            .settings-link {
+                position: relative;
+                top: 0;
+                left: 0;
+                display: inline-block;
+                margin-bottom: 20px;
+            }
+        }
     </style>
+
     <script>
         let offset = 20;
+        let isLoading = false;
+
         function loadMore() {
-            fetch(`?offset=${offset}${window.location.search ? '&' + window.location.search.substring(1) : ''}`, {
+            if (isLoading) return;
+            
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const endMessage = document.getElementById('end-message');
+            
+            loadMoreBtn.disabled = true;
+            loadingSpinner.style.display = 'block';
+            isLoading = true;
+
+            // Get current URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('offset', offset);
+
+            fetch(`?${urlParams.toString()}`, {
                 headers: {
-                    'HX-Request': 'true'
+                    'HX-Request': 'true',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
                 }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
                 document.querySelector('.articles').insertAdjacentHTML('beforeend', data.html);
                 offset += 20;
+                
                 if (!data.has_more) {
-                    document.getElementById('load-more').style.display = 'none';
-                    document.getElementById('no-more').style.display = 'block';
+                    loadMoreBtn.style.display = 'none';
+                    endMessage.style.display = 'block';
+                } else {
+                    loadMoreBtn.disabled = false;
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading more articles. Please try again.');
+                loadMoreBtn.disabled = false;
+            })
+            .finally(() => {
+                loadingSpinner.style.display = 'none';
+                isLoading = false;
             });
         }
+
+        // Infinite scroll implementation
+        let scrollDebounceTimer;
+        window.addEventListener('scroll', () => {
+            clearTimeout(scrollDebounceTimer);
+            scrollDebounceTimer = setTimeout(() => {
+                const loadMoreBtn = document.getElementById('load-more-btn');
+                if (!loadMoreBtn || loadMoreBtn.style.display === 'none') return;
+
+                const scrollPosition = window.innerHeight + window.pageYOffset;
+                const bodyHeight = document.documentElement.scrollHeight;
+                
+                if (scrollPosition >= bodyHeight - 1000 && !isLoading) {
+                    loadMore();
+                }
+            }, 100);
+        });
+
+        // Filter form submission
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterForm = document.querySelector('.filters form');
+            if (filterForm) {
+                filterForm.addEventListener('submit', function(e) {
+                    offset = 20; // Reset offset when applying new filters
+                    document.getElementById('end-message').style.display = 'none';
+                    document.getElementById('load-more-btn').style.display = 'block';
+                });
+            }
+        });
     </script>
 </head>
 <body>
@@ -84,8 +323,10 @@
         
         <h1>Latest News</h1>
 
+        <!-- Filters Section -->
         <div class="filters">
             <form method="GET" action="">
+                {% csrf_token %}
                 <div class="filter-group">
                     <label>Date Range:</label>
                     <input type="date" name="from" value="{{ from_date }}">
@@ -98,8 +339,8 @@
                     <select name="source">
                         <option value="">All Sources</option>
                         {% for source in sources %}
-                            <option value="{{ source }}" {% if source == selected_source %}selected{% endif %}>
-                                {{ source }}
+                            <option value="{{ source.name }}" {% if source.name == selected_source %}selected{% endif %}>
+                                {{ source.name }}
                             </option>
                         {% endfor %}
                     </select>
@@ -117,34 +358,41 @@
                     </select>
                 </div>
 
-                <button type="submit">Apply Filters</button>
-                {% if filter_applied %}
-                    <a href="{% url 'home' %}">Clear Filters</a>
-                {% endif %}
+                <div class="filter-buttons">
+                    <button type="submit">Apply Filters</button>
+                    {% if filter_applied %}
+                        <a href="{% url 'home' %}" class="clear-filters">Clear Filters</a>
+                    {% endif %}
+                </div>
             </form>
         </div>
 
+        <!-- Articles Section -->
         <div class="articles">
             {% for article in news_articles %}
                 <div class="article">
                     <h3>
-                        <a href="?article_url={{ article.url }}">{{ article.title }}</a>
+                        <a href="?article_url={{ article.url|urlencode }}">{{ article.title }}</a>
                     </h3>
                     <div class="article-meta">
                         <span>Source: {{ article.source }}</span> |
-                        <span>Category: {{ article.category }}</span> |
+                        <span>Category: {{ article.category|default:"Uncategorized" }}</span> |
                         <span>Published: {{ article.published_at|date:"F j, Y, g:i a" }}</span>
                     </div>
-                    <p>{{ article.summary }}</p>
+                    <p>{{ article.summary|default:"No summary available"|truncatewords:50 }}</p>
                 </div>
             {% empty %}
-                <p>No articles found matching your criteria.</p>
+                <div class="no-articles">
+                    <p>No articles found matching your criteria.</p>
+                </div>
             {% endfor %}
         </div>
 
+        <!-- Load More Section -->
         <div class="load-more-container">
-            <button onclick="loadMore()" id="load-more" class="load-more-btn">Load More</button>
-            <p id="no-more" style="display: none;">No more articles to load.</p>
+            <button onclick="loadMore()" id="load-more-btn" class="load-more-btn">Load More Articles</button>
+            <div id="loading-spinner" class="loading-spinner"></div>
+            <div id="end-message" class="end-message">That's all for now! Check back later for more articles.</div>
         </div>
     </div>
 </body>
