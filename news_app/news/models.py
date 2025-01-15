@@ -46,3 +46,12 @@ class NewsArticle(models.Model):
 
     def __str__(self):
         return self.title
+
+class CustomFeed(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    sources = models.ManyToManyField(NewsSource, related_name='custom_feeds')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name

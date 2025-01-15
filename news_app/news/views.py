@@ -5,12 +5,13 @@ from django.utils.dateparse import parse_date
 from django.http import JsonResponse
 from urllib.parse import urlparse
 from django.views.decorators.http import require_http_methods
-from .models import NewsSource, NewsArticle
+from .models import NewsSource, NewsArticle, CustomFeed
 from .utils.article_fetcher import fetch_article_content
 import logging
 from .utils.feed_parser import FeedParser
 from django.db.models import Q
 from django.core.paginator import Paginator
+
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,8 @@ def extract_publisher(url):
     return parts[0].title() if parts else ''
 
 def settings_page(request):
-    return render(request, 'news/settings.html')
+    sources = NewsSource.objects.all()
+    return render(request, 'news/settings.html', {'sources': sources})
 
 @require_http_methods(["POST"])
 def add_source(request):
@@ -82,7 +84,6 @@ def delete_source(request, source_id):
         return JsonResponse({'success': True})
     except NewsSource.DoesNotExist:
         return JsonResponse({'error': 'Source not found'}, status=404)
-
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +188,7 @@ def home(request):
                     )
                     if article_content.get('author'):
                         article_content['byline'] = f"By {article_content['author']}"
-                    
+
                     return render(request, 'news/article_detail.html', {
                         'article_content': article_content
                     })
@@ -220,6 +221,8 @@ def home(request):
                                  category_filter or search_query)
         }
 
+        context['custom_feeds'] = CustomFeed.objects.all()
+
         return render(request, 'news/home.html', context)
 
     except Exception as e:
@@ -227,3 +230,78 @@ def home(request):
         return render(request, 'news/home.html', {
             'error': 'An unexpected error occurred'
         })
+
+@require_http_methods(["GET"])
+def get_custom_feeds(request):
+    feeds = CustomFeed.objects.all()
+    data = [{
+        'id': feed.id,
+        'name': feed.name,
+        'sources': list(feed.sources.values('id', 'name'))
+    } for feed in feeds]
+    return JsonResponse({'feeds': data})
+
+@require_http_methods(["POST"])
+def add_custom_feed(request):
+    name = request.POST.get('name')
+    source_ids = request.POST.getlist('sources[]')
+
+    if not name or name.strip() == '':
+        return JsonResponse({'error': 'Feed name is required'}, status=400)
+
+    if CustomFeed.objects.filter(name=name).exists():
+        return JsonResponse({'error': 'Feed name must be unique'}, status=400)
+
+    try:
+        custom_feed = CustomFeed.objects.create(name=name)
+        custom_feed.sources.set(source_ids)
+        return JsonResponse({
+            'success': True,
+            'feed': {
+                'id': custom_feed.id,
+                'name': custom_feed.name,
+                'sources': list(custom_feed.sources.values('id', 'name'))
+            }
+        })
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@require_http_methods(["GET"])
+def view_custom_feed(request, feed_id):
+    try:
+        custom_feed = CustomFeed.objects.get(id=feed_id)
+        source_ids = custom_feed.sources.values_list('id', flat=True)
+
+        # Reuse existing article filtering logic but filter by selected sources
+        news_articles = NewsArticle.objects.filter(
+            source__in=custom_feed.sources.values_list('name', flat=True)
+        ).order_by('-published_at')
+
+        # Reuse the existing pagination logic
+        if request.headers.get('HX-Request'):
+            offset = int(request.GET.get('offset', 0))
+            limit = 20
+            paginator = Paginator(news_articles, limit)
+            page_number = (offset // limit) + 1
+            page = paginator.get_page(page_number)
+
+            articles_html = render(request, 'news/article_list.html', {
+                'news_articles': page.object_list
+            }).content.decode('utf-8')
+
+            return JsonResponse({
+                'html': articles_html,
+                'has_more': page.has_next()
+            })
+
+        context = {
+            'news_articles': news_articles[:20],
+            'total_count': news_articles.count(),
+            'custom_feed': custom_feed,
+            'is_custom_feed': True
+        }
+
+        return render(request, 'news/home.html', context)
+
+    except CustomFeed.DoesNotExist:
+        return redirect('home')

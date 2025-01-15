@@ -10,7 +10,7 @@
             font-family: Arial, sans-serif;
             line-height: 1.6;
         }
-        
+
         .page-container {
             max-width: 800px;
             margin: 0 auto;
@@ -204,7 +204,32 @@
             border-radius: 4px;
         }
 
-        /* Responsive design */
+        /* Custom Feeds Navigation */
+        .custom-feeds-nav {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .feed-link {
+            text-decoration: none;
+            color: #666;
+            padding: 5px 15px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .feed-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .feed-link:hover:not(.active) {
+            background-color: #f0f0f0;
+        }
+
         @media (max-width: 768px) {
             .page-container {
                 padding: 15px;
@@ -323,6 +348,17 @@
         
         <h1>Latest News</h1>
 
+        <!-- Custom Feeds Navigation -->
+        <div class="custom-feeds-nav">
+            <a href="{% url 'home' %}" class="feed-link {% if not is_custom_feed %}active{% endif %}">All News</a>
+            {% for feed in custom_feeds %}
+                <a href="{% url 'custom_feed' feed.id %}" 
+                   class="feed-link {% if is_custom_feed and custom_feed.id == feed.id %}active{% endif %}">
+                    {{ feed.name }}
+                </a>
+            {% endfor %}
+        </div>
+
         <!-- Filters Section -->
         <div class="filters">
             <form method="GET" action="">
@@ -360,39 +396,27 @@
 
                 <div class="filter-buttons">
                     <button type="submit">Apply Filters</button>
-                    {% if filter_applied %}
-                        <a href="{% url 'home' %}" class="clear-filters">Clear Filters</a>
-                    {% endif %}
+                    <a href="{% url 'home' %}" class="clear-filters">Clear Filters</a>
                 </div>
             </form>
         </div>
 
         <!-- Articles Section -->
         <div class="articles">
-            {% for article in news_articles %}
+            {% for article in articles %}
                 <div class="article">
-                    <h3>
-                        <a href="?article_url={{ article.url|urlencode }}">{{ article.title }}</a>
-                    </h3>
-                    <div class="article-meta">
-                        <span>Source: {{ article.source }}</span> |
-                        <span>Category: {{ article.category|default:"Uncategorized" }}</span> |
-                        <span>Published: {{ article.published_at|date:"F j, Y, g:i a" }}</span>
-                    </div>
-                    <p>{{ article.summary|default:"No summary available"|truncatewords:50 }}</p>
-                </div>
-            {% empty %}
-                <div class="no-articles">
-                    <p>No articles found matching your criteria.</p>
+                    <h3><a href="{{ article.url }}" target="_blank">{{ article.title }}</a></h3>
+                    <div class="article-meta">By {{ article.source }} - {{ article.published_at }}</div>
+                    <p>{{ article.summary }}</p>
                 </div>
             {% endfor %}
         </div>
 
         <!-- Load More Section -->
         <div class="load-more-container">
-            <button onclick="loadMore()" id="load-more-btn" class="load-more-btn">Load More Articles</button>
+            <button id="load-more-btn" class="load-more-btn" onclick="loadMore()">Load More</button>
             <div id="loading-spinner" class="loading-spinner"></div>
-            <div id="end-message" class="end-message">That's all for now! Check back later for more articles.</div>
+            <div id="end-message" class="end-message">No more articles</div>
         </div>
     </div>
 </body>

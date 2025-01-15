@@ -11,4 +11,7 @@ urlpatterns = [
     path('news/sources/<int:source_id>/update/', views.update_source, name='update_source'),  # Update source
     path('news/sources/<int:source_id>/delete/', views.delete_source, name='delete_source'),  # Delete source
     path('news/article/', views.fetch_article_content, name='fetch_article_content'),  # Article content
+    path('custom-feeds/', views.get_custom_feeds, name='get_custom_feeds'),
+    path('custom-feeds/add/', views.add_custom_feed, name='add_custom_feed'),
+    path('custom-feed/<int:feed_id>/', views.view_custom_feed, name='custom_feed'),
 ]

@@ -10,7 +10,7 @@
             margin: 20px;
             background-color: #f5f5f5;
         }
-        
+
         .page-container {
             max-width: 1200px;
             margin: 0 auto;
@@ -110,7 +110,7 @@
         }
 
         /* Form element styles */
-        #sourceForm {
+        #sourceForm, #feedForm {
             display: flex;
             flex-direction: column;
             gap: 15px;
@@ -174,27 +174,41 @@
             background-color: #c82333;
         }
 
-        /* Back link style */
-        .back-link {
-            text-decoration: none;
-            color: #007bff;
-            display: inline-block;
+        /* Source select styles */
+        .source-select {
+            margin: 10px 0;
+        }
+
+        .source-select select {
+            width: 100%;
+            min-height: 150px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        /* Custom feed styles */
+        .custom-feed-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .custom-feed-item:last-child {
+            border-bottom: none;
+        }
+
+        .custom-feed-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .custom-feed-sources {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .add-feed-btn {
             margin-bottom: 20px;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-
-        /* Header styles */
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-
-        h2 {
-            color: #444;
-            margin: 0 0 15px 0;
         }
     </style>
 </head>
@@ -202,37 +216,87 @@
     <div class="page-container">
         <h1>News Settings</h1>
         <a href="{% url 'home' %}" class="back-link">Back to Home</a>
-        
+
         <div class="actions">
             <button onclick="showAddSourceModal()">Add Source</button>
             <button id="toggleSourceBtn" onclick="toggleSourceList()">Show Existing Sources</button>
+            <button onclick="showManageFeedsModal()">Manage Feeds</button>
         </div>
 
         <div id="sourceList" class="source-list hidden"></div>
 
+        <!-- Add Source Modal -->
         <div id="sourceModal" class="modal">
             <div class="modal-content">
-                <h2>Add/Edit Source</h2>
+                <h2>Add News Source</h2>
                 <div id="errorMessage" class="error"></div>
                 <div class="modal-body">
                     <form id="sourceForm">
                         {% csrf_token %}
-                        <input type="hidden" id="sourceId">
+                        <input type="hidden" id="sourceId" name="sourceId">
                         <div class="form-group">
                             <label>Source Name:</label>
                             <input type="text" id="sourceName" name="name" required>
                         </div>
-                        <div class="links-container" id="linksContainer">
-                            <label>RSS Links:</label>
-                            <div class="link-input">
-                                <input type="url" name="links[]" required placeholder="Enter RSS feed URL">
-                                <button type="button" class="remove-btn" onclick="removeLink(this)">Remove</button>
+                        <div class="form-group">
+                            <label>RSS Feed URLs:</label>
+                            <div id="linksContainer" class="links-container">
+                                <div class="link-input">
+                                    <input type="url" name="links[]" required placeholder="Enter RSS feed URL">
+                                    <button type="button" class="remove-btn" onclick="removeLink(this)">Remove</button>
+                                </div>
                             </div>
+                            <button type="button" onclick="addLinkInput()">Add Another RSS Link</button>
                         </div>
-                        <button type="button" onclick="addLinkInput()">Add Another Link</button>
                         <div class="form-buttons">
-                            <button type="submit">Save</button>
+                            <button type="submit">Save Source</button>
                             <button type="button" onclick="closeModal()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Feeds Modal -->
+        <div id="feedsModal" class="modal">
+            <div class="modal-content">
+                <h2>Manage Custom Feeds</h2>
+                <div class="modal-body">
+                    <button onclick="showAddFeedModal()" class="add-feed-btn">Add Custom Feed</button>
+                    <div id="customFeedsList"></div>
+                </div>
+                <div class="form-buttons">
+                    <button onclick="closeFeedsModal()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Feed Modal -->
+        <div id="addFeedModal" class="modal">
+            <div class="modal-content">
+                <h2>Add Custom Feed</h2>
+                <div id="feedErrorMessage" class="error"></div>
+                <div class="modal-body">
+                    <form id="feedForm">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label>Feed Name:</label>
+                            <input type="text" id="feedName" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Select Sources:</label>
+                            <div class="source-select">
+                                <select multiple id="sourceSelect" name="sources[]">
+                                    {% for source in sources %}
+                                        <option value="{{ source.id }}">{{ source.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <button type="button" onclick="clearSourceSelection()">Clear Selection</button>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit">Save Feed</button>
+                            <button type="button" onclick="closeAddFeedModal()">Cancel</button>
                         </div>
                     </form>
                 </div>
@@ -241,185 +305,346 @@
     </div>
 
     <script>
-        function showAddSourceModal() {
-            document.getElementById('sourceModal').style.display = 'block';
-            document.getElementById('sourceForm').reset();
-            document.getElementById('sourceId').value = '';
-        }
+        // Modal handling functions
+function showAddSourceModal() {
+    document.getElementById('sourceModal').style.display = 'block';
+    document.getElementById('sourceForm').reset();
+    document.getElementById('errorMessage').textContent = '';
+    document.getElementById('sourceId').value = '';
+}
 
-        function closeModal() {
-            document.getElementById('sourceModal').style.display = 'none';
-            document.getElementById('errorMessage').textContent = '';
-        }
+function closeModal() {
+    document.getElementById('sourceModal').style.display = 'none';
+}
 
-        function addLinkInput() {
-            const container = document.getElementById('linksContainer');
-            const linkInput = document.createElement('div');
-            linkInput.className = 'link-input';
-            linkInput.innerHTML = `
-                <input type="url" name="links[]" required placeholder="Enter RSS feed URL">
-                <button type="button" class="remove-btn" onclick="removeLink(this)">Remove</button>
-            `;
-            container.appendChild(linkInput);
-            
-            // Scroll to the new input
-            const modalBody = document.querySelector('.modal-body');
-            modalBody.scrollTop = modalBody.scrollHeight;
-        }
+function showManageFeedsModal() {
+    document.getElementById('feedsModal').style.display = 'block';
+    fetchCustomFeeds();
+}
 
-        function removeLink(button) {
-            const linkInputs = document.querySelectorAll('.link-input');
-            if (linkInputs.length > 1) {
-                button.parentElement.remove();
-            } else {
-                document.getElementById('errorMessage').textContent = 'At least one RSS link is required';
-            }
-        }
+function closeFeedsModal() {
+    document.getElementById('feedsModal').style.display = 'none';
+}
 
-        function toggleSourceList() {
-            const sourceList = document.getElementById('sourceList');
-            const toggleBtn = document.getElementById('toggleSourceBtn');
+function showAddFeedModal() {
+    document.getElementById('addFeedModal').style.display = 'block';
+    updateSourceSelect();
+}
 
-            if (sourceList.classList.contains('hidden')) {
-                fetchSources();
-                sourceList.classList.remove('hidden');
-                toggleBtn.textContent = 'Hide Sources';
-            } else {
-                sourceList.classList.add('hidden');
-                toggleBtn.textContent = 'Show Existing Sources';
-            }
-        }
+function closeAddFeedModal() {
+    document.getElementById('addFeedModal').style.display = 'none';
+    document.getElementById('feedForm').reset();
+    document.getElementById('feedErrorMessage').textContent = '';
+}
 
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
+// Source list visibility toggle
+function toggleSourceList() {
+    const sourceList = document.getElementById('sourceList');
+    const toggleBtn = document.getElementById('toggleSourceBtn');
+    
+    if (sourceList.classList.contains('hidden')) {
+        sourceList.classList.remove('hidden');
+        toggleBtn.textContent = 'Hide Existing Sources';
+        fetchSources();
+    } else {
+        sourceList.classList.add('hidden');
+        toggleBtn.textContent = 'Show Existing Sources';
+    }
+}
 
-        function fetchSources() {
-            const csrftoken = getCookie('csrftoken');
-            fetch('/news/sources/', {
-                headers: {
-                    'X-CSRFToken': csrftoken
-                },
-                credentials: 'include'
-            })
-            .then(response => response.json())
-            .then(data => {
-                const sourceList = document.getElementById('sourceList');
-                if (data.sources && data.sources.length > 0) {
-                    sourceList.innerHTML = data.sources.map(source => `
-                        <div class="source-item" id="source-item-${source.id}">
-                            <span>${source.name}</span>
-                            <div class="buttons">
-                                <button onclick='editSource(${JSON.stringify(source)})'>Edit</button>
-                                <button class="remove-btn" onclick='removeSource(${source.id})'>Remove</button>
-                            </div>
+// Source management functions
+function fetchSources() {
+    const csrftoken = getCookie('csrftoken');
+    fetch('/news/sources/', {
+        headers: {
+            'X-CSRFToken': csrftoken
+        },
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        const sourceList = document.getElementById('sourceList');
+        if (data.sources && data.sources.length > 0) {
+            sourceList.innerHTML = data.sources.map(source => {
+                // Properly escape the source data
+                const escapedName = source.name.replace(/'/g, "\\'");
+                const linksJson = JSON.stringify(source.links).replace(/'/g, "\\'");
+                
+                return `
+                    <div class="source-item" data-id="${source.id}">
+                        <strong>${escapedName}</strong>
+                        <div class="buttons">
+                            <button onclick='editSource(${source.id}, "${escapedName}", ${linksJson})'>Edit</button>
+                            <button onclick="deleteSource(${source.id})">Delete</button>
                         </div>
-                    `).join('');
-                } else {
-                    sourceList.innerHTML = '<p>No sources found</p>';
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('sourceList').innerHTML = '<p>Error loading sources</p>';
-            });
-        }
-
-        function editSource(source) {
-            document.getElementById('sourceModal').style.display = 'block';
-            document.getElementById('sourceId').value = source.id;
-            document.getElementById('sourceName').value = source.name;
-            
-            const container = document.getElementById('linksContainer');
-            container.innerHTML = '';
-            source.links.forEach(link => {
-                const linkInput = document.createElement('div');
-                linkInput.className = 'link-input';
-                linkInput.innerHTML = `
-                    <input type="url" name="links[]" value="${link}" required placeholder="Enter RSS feed URL">
-                    <button type="button" class="remove-btn" onclick="removeLink(this)">Remove</button>
+                    </div>
                 `;
-                container.appendChild(linkInput);
+            }).join('');
+        } else {
+            sourceList.innerHTML = '<p>No sources added yet</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('sourceList').innerHTML = '<p>Error loading sources</p>';
+    });
+}
+
+
+function addLinkInput() {
+    const container = document.getElementById('linksContainer');
+    const newLink = document.createElement('div');
+    newLink.className = 'link-input';
+    newLink.innerHTML = `
+        <input type="url" name="links[]" required placeholder="Enter RSS feed URL">
+        <button type="button" class="remove-btn" onclick="removeLink(this)">Remove</button>
+    `;
+    container.appendChild(newLink);
+}
+
+function removeLink(button) {
+    const container = document.getElementById('linksContainer');
+    if (container.children.length > 1) {
+        button.parentElement.remove();
+    } else {
+        // If it's the last link input, just clear it instead of removing
+        button.parentElement.querySelector('input').value = '';
+    }
+}
+
+function editSource(id, name, links) {
+    // Show the modal
+    document.getElementById('sourceModal').style.display = 'block';
+    
+    // Set the source ID and name
+    document.getElementById('sourceId').value = id;
+    document.getElementById('sourceName').value = name;
+    
+    // Clear existing link inputs
+    const container = document.getElementById('linksContainer');
+    container.innerHTML = '';
+    
+    // Add link inputs for each existing link
+    links.forEach(link => {
+        const linkDiv = document.createElement('div');
+        linkDiv.className = 'link-input';
+        linkDiv.innerHTML = `
+            <input type="url" name="links[]" required value="${link}" placeholder="Enter RSS feed URL">
+            <button type="button" class="remove-btn" onclick="removeLink(this)">Remove</button>
+        `;
+        container.appendChild(linkDiv);
+    });
+    
+    // If no links exist, add one empty link input
+    if (links.length === 0) {
+        addLinkInput();
+    }
+    
+    // Clear any previous error messages
+    document.getElementById('errorMessage').textContent = '';
+}
+
+function deleteSource(id) {
+    if (!confirm('Are you sure you want to delete this source?')) {
+        return;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+    fetch(`/news/sources/${id}/delete/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': csrftoken
+        },
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            fetchSources();
+        } else {
+            alert('Error deleting source');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting source');
+    });
+}
+
+// Custom feeds functions
+function fetchCustomFeeds() {
+    const csrftoken = getCookie('csrftoken');
+    fetch('/custom-feeds/', {
+        headers: {
+            'X-CSRFToken': csrftoken
+        },
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        const feedsList = document.getElementById('customFeedsList');
+        if (data.feeds && data.feeds.length > 0) {
+            feedsList.innerHTML = data.feeds.map(feed => `
+                <div class="custom-feed-item">
+                    <div class="custom-feed-name">${feed.name}</div>
+                    <div class="custom-feed-sources">
+                        Sources: ${feed.sources.map(s => s.name).join(', ')}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            feedsList.innerHTML = '<p>No custom feeds available</p>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('customFeedsList').innerHTML = '<p>Error loading custom feeds</p>';
+    });
+}
+
+function updateSourceSelect() {
+    const csrftoken = getCookie('csrftoken');
+    fetch('/news/sources/', {
+        headers: {
+            'X-CSRFToken': csrftoken
+        },
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        const sourceSelect = document.getElementById('sourceSelect');
+        sourceSelect.innerHTML = '';
+        if (data.sources && data.sources.length > 0) {
+            data.sources.forEach(source => {
+                const option = document.createElement('option');
+                option.value = source.id;
+                option.textContent = source.name;
+                sourceSelect.appendChild(option);
             });
         }
+    })
+    .catch(error => {
+        console.error('Error fetching sources:', error);
+    });
+}
 
-        function removeSource(sourceId) {
-            if (confirm('Are you sure you want to remove this source?')) {
-                const csrftoken = getCookie('csrftoken');
-                fetch(`/news/sources/${sourceId}/delete/`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRFToken': csrftoken
-                    },
-                    credentials: 'include'
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Failed to remove source');
-                    }
-                    fetchSources();
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to remove source');
-                });
+function clearSourceSelection() {
+    const sourceSelect = document.getElementById('sourceSelect');
+    Array.from(sourceSelect.options).forEach(option => {
+        option.selected = false;
+    });
+}
+
+// Form submissions
+document.getElementById('sourceForm').onsubmit = function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const sourceId = formData.get('sourceId');
+    const url = sourceId 
+        ? `/news/sources/${sourceId}/update/`
+        : '/news/sources/add/';
+    const method = sourceId ? 'PUT' : 'POST';
+    
+    const csrftoken = getCookie('csrftoken');
+    fetch(url, {
+        method: method,
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrftoken
+        },
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            document.getElementById('errorMessage').textContent = data.error;
+        } else {
+            closeModal();
+            fetchSources();
+            if (document.getElementById('sourceList').classList.contains('hidden')) {
+                toggleSourceList();
             }
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('errorMessage').textContent = 'An error occurred. Please try again.';
+    });
+};
 
-        document.getElementById('sourceForm').onsubmit = function(e) {
-            e.preventDefault();
-            const sourceId = document.getElementById('sourceId').value;
-            const formData = new FormData(this);
-            const csrftoken = getCookie('csrftoken');
+document.getElementById('feedForm').onsubmit = function(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('feedName').value;
+    const sourceSelect = document.getElementById('sourceSelect');
+    const selectedSources = Array.from(sourceSelect.selectedOptions).map(option => option.value);
+    
+    if (!name.trim()) {
+        document.getElementById('feedErrorMessage').textContent = 'Feed name is required';
+        return;
+    }
+    
+    if (selectedSources.length === 0) {
+        document.getElementById('feedErrorMessage').textContent = 'Please select at least one source';
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('name', name);
+    selectedSources.forEach(sourceId => {
+        formData.append('sources[]', sourceId);
+    });
+    
+    const csrftoken = getCookie('csrftoken');
+    fetch('/custom-feeds/add/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': csrftoken
+        },
+        credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            document.getElementById('feedErrorMessage').textContent = data.error;
+        } else {
+            closeAddFeedModal();
+            fetchCustomFeeds();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('feedErrorMessage').textContent = 'An error occurred while saving the feed. Please try again.';
+    });
+};
 
-            const url = sourceId ? `/news/sources/${sourceId}/update/` : '/news/sources/add/';
-
-            fetch(url, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-CSRFToken': csrftoken
-                },
-                credentials: 'include'
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.error) {
-                    document.getElementById('errorMessage').textContent = data.error;
-                } else {
-                    closeModal();
-                    fetchSources();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('errorMessage').textContent = 'An error occurred. Please try again.';
-            });
-        };
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            const modal = document.getElementById('sourceModal');
-            if (event.target === modal) {
-                closeModal();
+// Cookie helper function
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
             }
-        };
+        }
+    }
+    return cookieValue;
+}
+
+// Initialize everything when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Add initial link input if none exists
+    if (document.getElementById('linksContainer').children.length === 0) {
+        addLinkInput();
+    }
+});
     </script>
+    
 </body>
 </html>
+    
